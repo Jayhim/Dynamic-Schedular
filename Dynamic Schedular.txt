@@ -1,3 +1,4 @@
+******************************************************************
 #!/bin/bash
 
 # Path to the input file
@@ -24,3 +25,88 @@ while IFS='|' read -r column1 column2 column3 column4; do
         echo "Column 4: $VAR4"
     fi
 done < "$INPUT_FILE"
+
+
+******************************************************************
+
+#!/bin/bash
+
+# Prompt the user for the table name
+read -p "Enter the table name: " table_name
+
+# Validate the table name input
+if [[ -z "$table_name" ]]; then
+  echo "Table name cannot be empty."
+  exit 1
+fi
+
+# Generate the dynamic SQL
+sql_query="SELECT * FROM ${table_name};"
+
+# Output the generated SQL
+echo "Generated SQL Query:"
+echo "$sql_query"
+
+# Optionally save the SQL query to a file
+read -p "Do you want to save the SQL query to a file? (y/n): " save_to_file
+if [[ "$save_to_file" =~ ^[Yy]$ ]]; then
+  file_name="${table_name}_query.sql"
+  echo "$sql_query" > "$file_name"
+  echo "SQL query saved to $file_name"
+fi
+
+
+******************************************************************
+
+#!/bin/bash
+
+# Prompt the user for table names
+read -p "Enter table names for the join (separated by commas or spaces): " table_names
+
+# Validate the input
+if [[ -z "$table_names" ]]; then
+  echo "Table names cannot be empty."
+  exit 1
+fi
+
+# Normalize input: replace commas with spaces and remove extra spaces
+table_names=$(echo "$table_names" | tr ',' ' ' | xargs)
+
+# Convert the table names into an array
+IFS=' ' read -r -a table_array <<< "$table_names"
+
+# Check if at least two tables are provided
+if [[ ${#table_array[@]} -lt 2 ]]; then
+  echo "Please enter at least two table names for a join."
+  exit 1
+fi
+
+# Prompt the user for the common column name
+read -p "Enter the common column name for the join: " common_column
+
+# Validate the common column name
+if [[ -z "$common_column" ]]; then
+  echo "Common column name cannot be empty."
+  exit 1
+fi
+
+# Generate the SQL JOIN query
+base_table="${table_array[0]}"
+join_query="SELECT * FROM ${base_table}"
+
+for (( i=1; i<${#table_array[@]}; i++ )); do
+  join_query+=" INNER JOIN ${table_array[$i]} ON ${base_table}.${common_column} = ${table_array[$i]}.${common_column}"
+done
+
+# Display the generated SQL query
+echo "Generated SQL Query:"
+echo "$join_query;"
+
+# Optionally save the SQL query to a file
+read -p "Do you want to save the SQL query to a file? (y/n): " save_to_file
+if [[ "$save_to_file" =~ ^[Yy]$ ]]; then
+  file_name="join_query.sql"
+  echo "$join_query;" > "$file_name"
+  echo "SQL query saved to $file_name"
+fi
+
