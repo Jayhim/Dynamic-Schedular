@@ -110,3 +110,88 @@ if [[ "$save_to_file" =~ ^[Yy]$ ]]; then
   echo "SQL query saved to $file_name"
 fi
 
+
+******************************************************************************************
+
+#!/bin/bash
+
+# Prompt the user for table names
+read -p "Enter table name(s) (separated by commas or spaces): " table_names
+
+# Validate the table names input
+if [[ -z "$table_names" ]]; then
+  echo "Table names cannot be empty."
+  exit 1
+fi
+
+# Normalize the input: replace commas with spaces and remove extra spaces
+table_names=$(echo "$table_names" | tr ',' ' ' | xargs)
+
+# Convert table names into an array
+table_array=($table_names)
+
+# Ensure there are at least two tables for a join
+if [[ ${#table_array[@]} -lt 2 ]]; then
+  echo "You need at least two tables to create a join query."
+  exit 1
+fi
+
+# Initialize variables for selected columns and base table
+selected_columns=""
+base_table=${table_array[0]}
+
+# Loop through each table to select columns
+for table in "${table_array[@]}"; do
+  echo "Enter columns to select from table '$table' (comma-separated, or * for all columns):"
+  read columns
+
+  # Validate column input
+  if [[ -z "$columns" ]]; then
+    echo "Columns cannot be empty. Please try again."
+    exit 1
+  fi
+
+  # Append the columns with table prefix
+  if [[ "$columns" == "*" ]]; then
+    selected_columns+=" ${table}.*,"
+  else
+    IFS=',' read -r -a column_array <<< "$columns"
+    for column in "${column_array[@]}"; do
+      selected_columns+=" ${table}.${column},"
+    done
+  fi
+done
+
+# Remove the trailing comma from selected_columns
+selected_columns=${selected_columns%,}
+
+# Generate the base SQL
+sql_query="SELECT $selected_columns FROM $base_table"
+
+# Loop through the remaining tables to build the JOIN clause
+for ((i = 1; i < ${#table_array[@]}; i++)); do
+  current_table=${table_array[i]}
+  read -p "Enter the join condition between $base_table and $current_table (e.g., $base_table.id = $current_table.id): " join_condition
+
+  # Validate join condition input
+  if [[ -z "$join_condition" ]]; then
+    echo "Join condition cannot be empty. Please try again."
+    exit 1
+  fi
+
+  # Append the JOIN clause
+  sql_query+=" INNER JOIN $current_table ON $join_condition"
+done
+
+# Output the generated SQL
+echo "Generated SQL Query:"
+echo "$sql_query;"
+
+# Optionally save the SQL query to a file
+read -p "Do you want to save the SQL query to a file? (y/n): " save_to_file
+if [[ "$save_to_file" =~ ^[Yy]$ ]]; then
+  file_name="custom_generated_join_query.sql"
+  echo "$sql_query;" > "$file_name"
+  echo "SQL query saved to $file_name"
+fi
+
