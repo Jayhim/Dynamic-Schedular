@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Path to the input file
+INPUT_FILE="data.txt"
+
+# Value to search for (e.g., search in the second column)
+SEARCH_VALUE="Smith"
+
+# Loop through each line in the file
+while IFS='|' read -r column1 column2 column3 column4; do
+    # Check if the second column matches the search value
+    if [[ "$column2" == "$SEARCH_VALUE" ]]; then
+        # Assign columns to variables
+        VAR1="$column1"
+        VAR2="$column2"
+        VAR3="$column3"
+        VAR4="$column4"
+
+        # Print the results
+        echo "Match found!"
+        echo "Column 1: $VAR1"
+        echo "Column 2: $VAR2"
+        echo "Column 3: $VAR3"
+        echo "Column 4: $VAR4"
+    fi
+done < "$INPUT_FILE"
