@@ -195,3 +195,145 @@ if [[ "$save_to_file" =~ ^[Yy]$ ]]; then
   echo "SQL query saved to $file_name"
 fi
 
+******************************************************************
+
+import re
+import teradatasql
+
+# Connection configuration - Update with your Teradata credentials
+teradata_config = {
+    'host': 'your_teradata_host',
+    'user': 'your_username',
+    'password': 'your_password'
+}
+
+# Utility function to map Teradata data types to Hive data types
+def map_datatype(teradata_type):
+    type_map = {
+        'BYTEINT': 'TINYINT',
+        'SMALLINT': 'SMALLINT',
+        'INTEGER': 'INT',
+        'BIGINT': 'BIGINT',
+        'DECIMAL': 'DECIMAL',
+        'FLOAT': 'DOUBLE',
+        'CHAR': 'STRING',
+        'VARCHAR': 'STRING',
+        'DATE': 'DATE',
+        'TIMESTAMP': 'TIMESTAMP',
+    }
+    match = re.match(r'(\w+)(\(\d+(?:,\d+)?\))?', teradata_type)
+    base_type = match.group(1).upper()
+    precision = match.group(2) if match.group(2) else ''
+    return type_map.get(base_type, 'STRING') + precision
+
+# Function to retrieve table definition from Teradata
+def get_teradata_table_definition(table_name):
+    with teradatasql.connect(
+        host=teradata_config['host'], 
+        user=teradata_config['user'], 
+        password=teradata_config['password']
+    ) as con:
+        cursor = con.cursor()
+        cursor.execute(f"HELP TABLE {table_name}")
+        columns = cursor.fetchall()
+        return columns
+
+# Function to generate Hive table definition
+def generate_hive_table_definition(teradata_columns, table_name):
+    hive_columns = []
+    for column in teradata_columns:
+        column_name = column[0]
+        column_type = map_datatype(column[1])
+        hive_columns.append(f"  `{column_name}` {column_type}")
+
+    hive_create_statement = f"""
+CREATE TABLE {table_name}_hive (
+{',\n'.join(hive_columns)}
+)
+STORED AS PARQUET;
+"""
+    return hive_create_statement
+
+if __name__ == "__main__":
+    table_name = input("Enter Teradata table name: ")
+    columns = get_teradata_table_definition(table_name)
+    hive_table_definition = generate_hive_table_definition(columns, table_name)
+    print("\nHive Table Definition:\n")
+    print(hive_table_definition)
+
+
+
+***************************************************************************************
+
+
+import re
+import teradatasql
+
+# Connection configuration - Update with your Teradata credentials
+teradata_config = {
+    'host': 'your_teradata_host',
+    'user': 'your_username',
+    'password': 'your_password'
+}
+
+# Utility function to map Teradata data types to Hive data types
+def map_datatype(teradata_type):
+    type_map = {
+        'BYTEINT': 'TINYINT',
+        'SMALLINT': 'SMALLINT',
+        'INTEGER': 'INT',
+        'BIGINT': 'BIGINT',
+        'DECIMAL': 'DECIMAL',
+        'FLOAT': 'DOUBLE',
+        'CHAR': 'STRING',
+        'VARCHAR': 'STRING',
+        'DATE': 'DATE',
+        'TIMESTAMP': 'TIMESTAMP',
+    }
+    match = re.match(r'(\w+)(\(\d+(?:,\d+)?\))?', teradata_type)
+    base_type = match.group(1).upper()
+    precision = match.group(2) if match.group(2) else ''
+    return type_map.get(base_type, 'STRING') + precision
+
+# Function to retrieve table definition from Teradata
+def get_teradata_table_definition(table_name):
+    with teradatasql.connect(
+        host=teradata_config['host'], 
+        user=teradata_config['user'], 
+        password=teradata_config['password']
+    ) as con:
+        cursor = con.cursor()
+        cursor.execute(f"HELP TABLE {table_name}")
+        columns = cursor.fetchall()
+        return columns
+
+# Function to generate Hive table definition
+def generate_hive_table_definition(teradata_columns, table_name, partition_columns=None):
+    hive_columns = []
+    for column in teradata_columns:
+        column_name = column[0]
+        column_type = map_datatype(column[1])
+        hive_columns.append(f"  `{column_name}` {column_type}")
+
+    partition_clause = ""
+    if partition_columns:
+        partition_definitions = [f"  `{col}` STRING" for col in partition_columns]  # Assuming partitions are STRING for simplicity
+        partition_clause = f"PARTITIONED BY (\n{',\n'.join(partition_definitions)}\n)"
+
+    hive_create_statement = f"""
+CREATE TABLE {table_name}_hive (
+{',\n'.join(hive_columns)}
+)
+{partition_clause}
+STORED AS PARQUET;
+"""
+    return hive_create_statement
+
+if __name__ == "__main__":
+    table_name = input("Enter Teradata table name: ")
+    columns = get_teradata_table_definition(table_name)
+    partition_columns = input("Enter partition columns (comma-separated): ").split(',') if input("Do you want to add partitions? (yes/no): ").strip().lower() == 'yes' else None
+    hive_table_definition = generate_hive_table_definition(columns, table_name, partition_columns)
+    print("\nHive Table Definition:\n")
+    print(hive_table_definition)
+
